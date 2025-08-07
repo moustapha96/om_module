@@ -291,14 +291,14 @@ class OrangeMoneyTransaction(models.Model):
     success_url = fields.Char(
         string='URL de succès',
         required=True,
-        default='https://dev.ccbmshop.com/',
+        default='https://www.ccbmshop.sn/',
         help="URL de redirection en cas de paiement réussi"
     )
     
     cancel_url = fields.Char(
         string='URL d\'annulation',
         required=False,
-        default='https://dev.ccbmshop.com/',
+        default='https://www.ccbmshop.sn/',
         help="URL de redirection en cas d'annulation"
     )
 

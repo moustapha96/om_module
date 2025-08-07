@@ -77,13 +77,13 @@
             
 #             # Créer l'ordre de paiement Orange Money via la méthode du modèle de configuration
 #             try:
-#                 success_url_new =  f"https://dev.ccbmshop.com/om-paiement?transaction={transaction_id}"
+#                 success_url_new =  f"https://www.ccbmshop.sn/om-paiement?transaction={transaction_id}"
 
 #                 cancel_url = None
 #                 if order.type_sale == "order":
-#                     cancel_url = f"https://dev.ccbmshop.com/commandes/{order.id}/détails"
+#                     cancel_url = f"https://www.ccbmshop.sn/commandes/{order.id}/détails"
 #                 elif order.type_sale == "creditorder":
-#                     cancel_url = f"https://dev.ccbmshop.com/credit-commandes/{order.id}/détails"
+#                     cancel_url = f"https://www.ccbmshop.sn/credit-commandes/{order.id}/détails"
 
 
 #                 payment_data_from_config = config.create_payment_order(
@@ -694,13 +694,13 @@ class OrangeMoneyController(http.Controller):
             
             # Créer l'ordre de paiement Orange Money via la méthode du modèle de configuration
             try:
-                success_url_new =  f"https://dev.ccbmshop.com/om-paiement?transaction={transaction_id}"
+                success_url_new =  f"https://www.ccbmshop.sn/om-paiement?transaction={transaction_id}"
 
                 cancel_url = None
                 if order.type_sale == "order":
-                    cancel_url = f"https://dev.ccbmshop.com/commandes/{order.id}/détails"
+                    cancel_url = f"https://www.ccbmshop.sn/commandes/{order.id}/détails"
                 elif order.type_sale == "creditorder":
-                    cancel_url = f"https://dev.ccbmshop.com/credit-commandes/{order.id}/détails"
+                    cancel_url = f"https://www.ccbmshop.sn/credit-commandes/{order.id}/détails"
 
 
                 payment_data_from_config = config.create_payment_order(
