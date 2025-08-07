@@ -90,18 +90,22 @@ class OrangeMoneyWebhookController(http.Controller):
                 pourcentage = (100 * transaction_om.amount) / order.amount_total if order.amount_total else 0
                 # Créer une facture d'acompte
                 if status == 'SUCCESS' and pourcentage > 0:
-                    advance_invoice = self.create_advance_invoice(order, pourcentage)
 
-                    if advance_invoice:
-                        # Traiter le paiement
-                        payment_result = self.process_payment(order, advance_invoice, transaction_om.amount, request.env.company)
+                    result = self._create_payment_transaction(transaction_om)
+                    _logger.info(f"Création de la transaction de paiement pour la transaction {transaction_id} : {result}")
 
-                        if not payment_result['success']:
-                            _logger.error(f"Erreur lors du traitement du paiement pour la transaction {transaction_id}")
-                            return {'status': 'error', 'message': 'Erreur lors du traitement du paiement'}
-                    else:
-                        _logger.error(f"Erreur lors de la création de la facture d'acompte pour la transaction {transaction_id}")
-                        return {'status': 'error', 'message': 'Erreur lors de la création de la facture d\'acompte'}
+                    # advance_invoice = self.create_advance_invoice(order, pourcentage)
+
+                    # if advance_invoice:
+                    #     # Traiter le paiement
+                    #     payment_result = self.process_payment(order, advance_invoice, transaction_om.amount, request.env.company)
+
+                    #     if not payment_result['success']:
+                    #         _logger.error(f"Erreur lors du traitement du paiement pour la transaction {transaction_id}")
+                    #         return {'status': 'error', 'message': 'Erreur lors du traitement du paiement'}
+                    # else:
+                    #     _logger.error(f"Erreur lors de la création de la facture d'acompte pour la transaction {transaction_id}")
+                    #     return {'status': 'error', 'message': 'Erreur lors de la création de la facture d\'acompte'}
                 else:
                     _logger.info(f"Aucun acompte à créer pour la transaction {transaction_id} avec pourcentage {pourcentage}")
                     return {'status': 'success', 'message': 'Aucun acompte à créer'}
@@ -407,3 +411,53 @@ class OrangeMoneyWebhookController(http.Controller):
             _logger.exception("Erreur lors de la réconciliation du paiement: %s", str(e))
             return None
 
+
+    def _create_payment_transaction(self, transaction):
+        try:
+            order = transaction.order_id
+            company = order.company_id
+            partner = order.partner_id
+            amount = transaction.amount
+
+            journal = request.env['account.journal'].sudo().search([('code', '=', 'CSH1'), ('company_id', '=', company.id)], limit=1)
+            payment_method = request.env['account.payment.method'].sudo().search([('payment_type', '=', 'inbound')], limit=1)
+            payment_method_line = request.env['account.payment.method.line'].sudo().search([('payment_method_id', '=', payment_method.id), ('journal_id', '=', journal.id)], limit=1)
+
+            if not journal:
+                journal = request.env['account.journal'].sudo().search([('type', 'in', ['cash', 'bank']), ('company_id', '=', company.id)], limit=1)
+
+            if not payment_method:
+                payment_method = request.env['account.payment.method'].sudo().search([('payment_type', '=', 'inbound')], limit=1)
+
+            if not payment_method_line:
+                payment_method_line = request.env['account.payment.method.line'].sudo().search([('payment_method_id', '=', payment_method.id), ('journal_id', '=', journal.id)], limit=1)
+
+            if not company:
+                company = request.env['res.company'].sudo().search([('id', '=', 1)], limit=1)
+
+            if order and order.state != 'sale':
+                order.action_confirm()
+
+            if order.advance_payment_status != 'paid':
+                payment_vals  = {
+                    'payment_type': 'inbound',
+                    'partner_type': 'customer',
+                    'partner_id': partner.id,
+                    'amount': amount,
+                    'journal_id': journal.id,
+                    'currency_id': journal.currency_id.id,
+                    'payment_method_line_id': payment_method_line.id,
+                    'payment_method_id': payment_method.id,
+                    'ref': order.name,
+                    'sale_id': order.id
+                }
+                account_payment = request.env['account.payment'].sudo().create(payment_vals)
+                if account_payment:
+                    account_payment.action_post()
+                    return True
+                else:
+                    return False
+
+        except Exception as e:
+            _logger.error(f"Error handling completed payment: {str(e)}")
+            return False
