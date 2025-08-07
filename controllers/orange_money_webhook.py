@@ -426,21 +426,18 @@ class OrangeMoneyWebhookController(http.Controller):
 
             journal = request.env['account.journal'].sudo().search([('code', '=', 'CSH1'), ('company_id', '=', company.id)], limit=1)
             payment_method = request.env['account.payment.method'].sudo().search([('payment_type', '=', 'inbound')], limit=1)
-            payment_method_line = request.env['account.payment.method.line'].sudo().search([('payment_method_id', '=', payment_method.id), ('journal_id', '=', journal.id)], limit=1)
-
+            
             if not journal:
                 journal = request.env['account.journal'].sudo().search([('type', 'in', ['cash', 'bank']), ('company_id', '=', company.id)], limit=1)
 
             if not payment_method:
                 payment_method = request.env['account.payment.method'].sudo().search([('payment_type', '=', 'inbound')], limit=1)
 
-            if not payment_method_line:
-                payment_method_line = request.env['account.payment.method.line'].sudo().search([('payment_method_id', '=', payment_method.id), ('journal_id', '=', journal.id)], limit=1)
-
+            
             if not company:
                 company = request.env['res.company'].sudo().search([('id', '=', 1)], limit=1)
 
-            if order and order.state != 'sale':
+            if order and order.type_sale == 'order':
                 order.action_confirm()
 
             if order.advance_payment_status != 'paid':
@@ -451,7 +448,7 @@ class OrangeMoneyWebhookController(http.Controller):
                     'amount': amount,
                     'journal_id': journal.id,
                     'currency_id': journal.currency_id.id,
-                    'payment_method_line_id': payment_method_line.id,
+                    'payment_method_line_id': 1,
                     'payment_method_id': payment_method.id,
                     'ref': order.name,
                     'sale_id': order.id,
@@ -460,10 +457,18 @@ class OrangeMoneyWebhookController(http.Controller):
                 account_payment = request.env['account.payment'].sudo().create(payment_vals)
                 if account_payment:
                     account_payment.action_post()
+                    if order and order.type_sale == 'creditorder':
+                        order.action_confirm()
+                    _logger.info(f"Paiement enregistré pour la transaction {transaction.transaction_id}")
+
                     return True
                 else:
                     return False
-
+                
+            _logger.info(f"Paiement enregistré pour la transaction {transaction.transaction_id}")
         except Exception as e:
             _logger.error(f"Error handling completed payment: {str(e)}")
             return False
+        
+
+   
